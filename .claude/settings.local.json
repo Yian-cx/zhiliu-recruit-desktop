@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(kill 17410 17429 46815 17460)",
+      "Bash(.venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8000)",
+      "Bash(sqlite3 /Users/yian/Desktop/zhiliu-recruit/api/data/app.db \".schema user\")",
+      "Bash(sqlite3 /Users/yian/Desktop/zhiliu-recruit/api/data/app.db \"SELECT * FROM user LIMIT 1\")",
+      "Bash(npx vite *)",
+      "Bash(lsof -ti :8000 -sTCP:LISTEN)",
+      "Bash(xargs kill -9)",
+      "Bash(lsof -ti :5173 -sTCP:LISTEN)",
+      "Bash(npm run *)",
+      "Bash(/Users/yian/Desktop/zhiliu-recruit/api/.venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8000)",
+      "Bash(curl -s http://127.0.0.1:8000/api/health)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\" http://localhost:5173/)",
+      "Bash(.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload)",
+      "WebSearch",
+      "Bash(claude plugin *)",
+      "Bash(npx skills *)",
+      "Read(//Users/yian/.claude/plugins/marketplaces/thedotmack/**)",
+      "Bash(find ~/.claude/plugins -path \"*claude-mem*\" -name \"*.md\" -not -path \"*/node_modules/*\" 2>/dev/null | head -10)",
+      "Read(//Users/yian/.claude/plugins/**)",
+      "Read(//Users/yian/.claude/**)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); plugins=d.get\\('plugins',{}\\); print\\(json.dumps\\(plugins, indent=2, ensure_ascii=False\\)\\)\")",
+      "Bash(export PATH=\"$HOME/.local/bin:$HOME/.n/bin:$HOME/.nodebrew/current/bin:/opt/homebrew/bin:/usr/local/bin:$PATH\")",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --no-turbopack --use-npm)",
+      "Bash(npm install *)",
+      "Bash(brew list *)",
+      "Bash(brew install *)",
+      "Bash(brew services *)",
+      "Bash(/opt/homebrew/opt/postgresql@17/bin/pg_isready)",
+      "Bash(/opt/homebrew/opt/postgresql@17/bin/psql -d postgres -c \"CREATE ROLE postgres WITH LOGIN SUPERUSER PASSWORD 'postgres';\")",
+      "Bash(/opt/homebrew/opt/postgresql@17/bin/createdb -O postgres zhiliu)"
+    ]
+  }
+}

@@ -1,0 +1,287 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── 枚举 ──
+enum Role {
+  USER
+  ADMIN
+}
+
+enum MembershipTier {
+  FREE
+  WEEKLY_VIP
+  MONTHLY_VIP
+  YEARLY_VIP
+  PERMANENT_SVIP
+}
+
+enum JobStatus {
+  INTERESTED
+  APPLIED
+  INTERVIEWING
+  OFFER
+  REJECTED
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum InterviewType {
+  TECHNICAL
+  HR
+  BEHAVIORAL
+}
+
+enum EventType {
+  INTERVIEW
+  DEADLINE
+  REMINDER
+  CUSTOM
+}
+
+// ── 用户 ──
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  emailVerified DateTime?
+  phone         String?
+  phoneVerified DateTime?
+  wechat        String?
+  qq            String?
+  passwordHash  String
+  nickname      String?
+  avatarUrl     String?
+  role              Role           @default(USER)
+  membershipTier    MembershipTier @default(FREE)
+  membershipExpiresAt DateTime?
+  personalApiKey    String?
+  personalBaseUrl   String?
+  personalModelName String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  resumes        Resume[]
+  jobs           Job[]
+  offers         Offer[]
+  notes          JobNote[]
+  interviewSessions InterviewSession[]
+  careerPlans    CareerPlan[]
+  calendarEvents CalendarEvent[]
+  auditLogs      AuditLog[]
+  usageRecords   UsageRecord[]
+  coachConversations CoachConversation[]
+  jobComparisons      JobComparison[]
+  offerComparisons    OfferComparison[]
+}
+
+// ── 简历 ──
+model Resume {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  content   String            // Markdown
+  fileUrl   String?
+  fileType  String?
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  jobResumes JobResume[]
+}
+
+// ── 岗位 ──
+model Job {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company      String
+  title        String
+  salaryMin    Int?
+  salaryMax    Int?
+  location     String?
+  remote       Boolean   @default(false)
+  jd           String
+  jdStructured        Json?
+  onboardingContent   String?
+  status              JobStatus @default(INTERESTED)
+  sourceUrl    String?
+  isFavorite   Boolean   @default(false)
+  matchScore   Int?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  jobResumes       JobResume[]
+  offers           Offer[]
+  notes            JobNote[]
+  interviewSessions InterviewSession[]
+  careerPlans      CareerPlan[]
+}
+
+// ── 岗位-简历关联 ──
+model JobResume {
+  id               String  @id @default(cuid())
+  jobId            String
+  job              Job     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  resumeId         String
+  resume           Resume  @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  optimizedContent String?
+
+  @@unique([jobId, resumeId])
+}
+
+// ── Offer ──
+model Offer {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId       String
+  job         Job         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  company     String
+  title       String
+  salary      Int
+  salaryMonth Int
+  benefits    String?
+  status      OfferStatus @default(PENDING)
+  notes       String?
+  receivedAt  DateTime    @default(now())
+  respondedAt DateTime?
+  createdAt   DateTime    @default(now())
+}
+
+// ── 面试会话 ──
+model InterviewSession {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId     String?
+  job       Job?          @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  type      InterviewType @default(TECHNICAL)
+  messages  Json          // [{role, content}...]
+  feedback  String?
+  createdAt DateTime      @default(now())
+}
+
+// ── 职业规划 ──
+model CareerPlan {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId     String?
+  job       Job?     @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  title     String
+  skillGaps Json
+  roadmap   Json
+  progress  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ── 岗位笔记 ──
+model JobNote {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId     String
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ── 日历事件 ──
+model CalendarEvent {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  type        EventType @default(CUSTOM)
+  startAt     DateTime
+  endAt       DateTime
+  jobId       String?
+  createdAt   DateTime  @default(now())
+}
+
+// ── AI 配置（单例） ──
+model AiConfig {
+  id           String   @id @default("default")
+  apiKey       String
+  baseUrl      String   @default("https://api.deepseek.com")
+  modelName    String   @default("deepseek-chat")
+  vipModelName String?
+  updatedAt    DateTime @updatedAt
+}
+
+// ── 用量记录（免费用户每日配额） ──
+model UsageRecord {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date       DateTime
+  aiCalls    Int      @default(0)
+  interviews Int      @default(0)
+
+  @@unique([userId, date])
+}
+
+// ── 审计日志 ──
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  detail    String?
+  ip        String?
+  createdAt DateTime @default(now())
+}
+
+// ── AI 职业顾问对话 ──
+model CoachConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  messages  CoachMessage[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CoachMessage {
+  id             String            @id @default(cuid())
+  conversationId String
+  conversation   CoachConversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String
+  createdAt      DateTime          @default(now())
+}
+
+// ── 岗位对比历史 ──
+model JobComparison {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobIds    Json
+  result    String
+  createdAt DateTime @default(now())
+}
+
+// ── Offer 对比历史 ──
+model OfferComparison {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  offerIds  Json
+  result    String
+  createdAt DateTime @default(now())
+}
