@@ -35,7 +35,6 @@ import {
   MessageSquare,
   Loader2,
   Plus,
-  Search,
   ChevronLeft,
   ChevronRight,
   StickyNote,
@@ -68,6 +67,8 @@ interface JobDetail {
   salaryMax: number | null;
   location: string | null;
   remote: boolean;
+  prevId?: string | null;
+  nextId?: string | null;
   jd: string;
   jdStructured: any;
   status: string;
@@ -86,11 +87,17 @@ export default function JobDetailPage() {
   const [job, setJob] = useState<JobDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [prevId, setPrevId] = useState<string | null>(null);
+  const [nextId, setNextId] = useState<string | null>(null);
+
   useEffect(() => {
     async function fetchJob() {
       const res = await fetch(`/api/jobs/${id}`);
       if (res.ok) {
-        setJob(await res.json());
+        const data = await res.json();
+        setPrevId(data.prevId || null);
+        setNextId(data.nextId || null);
+        setJob(data);
       }
       setLoading(false);
     }
@@ -246,9 +253,6 @@ export default function JobDetailPage() {
 
   // ── Notes state ──
   const [notes, setNotes] = useState<any[]>([]);
-  const [notesTotal, setNotesTotal] = useState(0);
-  const [notesPage, setNotesPage] = useState(1);
-  const [notesSearch, setNotesSearch] = useState("");
   const [notesLoading, setNotesLoading] = useState(false);
   const [selectedNote, setSelectedNote] = useState<any | null>(null);
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
@@ -256,24 +260,15 @@ export default function JobDetailPage() {
   const [noteContent, setNoteContent] = useState("");
   const [noteSaving, setNoteSaving] = useState(false);
 
-  const pageSize = 10;
-
   async function fetchNotes() {
     if (!job) return;
     setNotesLoading(true);
-    const params = new URLSearchParams({
-      jobId: job.id,
-      page: String(notesPage),
-      pageSize: String(pageSize),
-    });
-    if (notesSearch) params.set("search", notesSearch);
-    const res = await fetch(`/api/notes?${params}`);
+    const res = await fetch(`/api/notes?jobId=${job.id}`);
     if (res.ok) {
       const data = await res.json();
-      setNotes(data.notes);
-      setNotesTotal(data.total);
-      if (data.notes.length > 0 && !selectedNote) {
-        setSelectedNote(data.notes[0]);
+      setNotes(data.notes || data);
+      if ((data.notes || data).length > 0 && !selectedNote) {
+        setSelectedNote((data.notes || data)[0]);
       }
     }
     setNotesLoading(false);
@@ -281,7 +276,7 @@ export default function JobDetailPage() {
 
   useEffect(() => {
     fetchNotes();
-  }, [job, notesPage, notesSearch]);
+  }, [job]);
 
   async function saveNote() {
     if (!noteContent.trim()) return;
@@ -334,8 +329,6 @@ export default function JobDetailPage() {
     setNoteContent("");
     setNoteDialogOpen(true);
   }
-
-  const totalPages = Math.ceil(notesTotal / pageSize);
 
   if (loading) {
     return (
@@ -427,6 +420,30 @@ export default function JobDetailPage() {
         </div>
       </div>
 
+      {/* Prev/Next Navigation */}
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={!prevId}
+          onClick={() => prevId && router.push(`/jobs/${prevId}`)}
+          className="text-xs"
+        >
+          <ChevronLeft className="size-3.5 mr-1" />
+          上一条
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={!nextId}
+          onClick={() => nextId && router.push(`/jobs/${nextId}`)}
+          className="text-xs"
+        >
+          下一条
+          <ChevronRight className="size-3.5 ml-1" />
+        </Button>
+      </div>
+
       {/* Info Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="glass border-0">
@@ -509,9 +526,9 @@ export default function JobDetailPage() {
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <StickyNote className="size-4" />
               岗位笔记
-              {notesTotal > 0 && (
+              {notes.length > 0 && (
                 <span className="text-xs text-muted-foreground font-normal">
-                  ({notesTotal})
+                  ({notes.length})
                 </span>
               )}
             </CardTitle>
@@ -528,26 +545,12 @@ export default function JobDetailPage() {
             </div>
           ) : notes.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-12">
-              {notesSearch ? "没有匹配的笔记" : "暂无笔记"}
+              暂无笔记
             </p>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] divide-y lg:divide-y-0 lg:divide-x divide-border">
               {/* Note List */}
               <div className="flex flex-col min-h-0">
-                <div className="p-3 border-b border-border">
-                  <div className="relative">
-                    <Search className="size-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="搜索笔记..."
-                      className="pl-8 h-8 text-xs"
-                      value={notesSearch}
-                      onChange={(e) => {
-                        setNotesSearch(e.target.value);
-                        setNotesPage(1);
-                      }}
-                    />
-                  </div>
-                </div>
                 <div className="flex-1 overflow-y-auto max-h-[400px]">
                   {notes.map((note: any) => (
                     <button
@@ -570,31 +573,6 @@ export default function JobDetailPage() {
                     </button>
                   ))}
                 </div>
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between p-2 border-t border-border">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-7"
-                      disabled={notesPage <= 1}
-                      onClick={() => setNotesPage((p) => p - 1)}
-                    >
-                      <ChevronLeft className="size-3" />
-                    </Button>
-                    <span className="text-[10px] text-muted-foreground">
-                      {notesPage}/{totalPages}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-7"
-                      disabled={notesPage >= totalPages}
-                      onClick={() => setNotesPage((p) => p + 1)}
-                    >
-                      <ChevronRight className="size-3" />
-                    </Button>
-                  </div>
-                )}
               </div>
 
               {/* Note Detail */}

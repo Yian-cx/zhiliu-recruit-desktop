@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { User, Lock, Save, Loader2, Crown, BarChart3, Key, AlertCircle, Zap, Mail, Phone, MessageCircle, Globe } from "lucide-react";
 
 const TIER_LABELS: Record<string, string> = {
-  FREE: "免费用户",
+  FREE: "普通用户",
   WEEKLY_VIP: "周 VIP",
   MONTHLY_VIP: "月 VIP",
   YEARLY_VIP: "年 VIP",
@@ -21,7 +21,7 @@ const TIER_LABELS: Record<string, string> = {
 };
 
 export default function ProfilePage() {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
 
   const [nickname, setNickname] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -81,6 +81,31 @@ export default function ProfilePage() {
     load();
   }, []);
 
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch("/api/profile/avatar", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      setAvatarUrl(data.url);
+      toast.success("头像已上传，保存资料后生效");
+    } else {
+      const err = await res.json();
+      toast.error(err.error || "上传失败");
+    }
+
+    // Reset file input so the same file can be re-selected
+    e.target.value = "";
+  }
+
   async function saveProfile() {
     if (!nickname.trim()) {
       toast.error("请输入昵称");
@@ -100,7 +125,8 @@ export default function ProfilePage() {
       }),
     });
     if (res.ok) {
-      toast.success("资料已更新（头像在下次登录时生效）");
+      await update();
+      toast.success("资料已更新");
     } else {
       const err = await res.json();
       toast.error(err.error || "更新失败");
@@ -148,11 +174,16 @@ export default function ProfilePage() {
     });
     if (res.ok) {
       toast.success("AI 配置已保存");
+      setSavingAiConfig(false);
+      window.dispatchEvent(new Event("api-config-changed"));
+      if (personalApiKey.trim()) {
+        await testPersonalConnection();
+      }
     } else {
       const err = await res.json();
       toast.error(err.error || "保存失败");
+      setSavingAiConfig(false);
     }
-    setSavingAiConfig(false);
   }
 
   async function testPersonalConnection() {
@@ -181,6 +212,7 @@ export default function ProfilePage() {
       toast.error("连接测试失败");
     }
     setTestingConnection(false);
+    window.dispatchEvent(new Event("api-config-changed"));
   }
 
   const initials = (nickname || "U").slice(0, 2).toUpperCase();
@@ -332,20 +364,31 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Avatar + Nickname */}
-          <div className="flex items-center gap-4">
-            <Avatar className="size-16">
-              <AvatarImage src={avatarUrl || undefined} />
-              <AvatarFallback className="text-lg bg-primary/10 text-primary">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
+          <div className="flex items-start gap-4">
+            <div className="relative group shrink-0">
+              <Avatar className="size-16">
+                <AvatarImage src={avatarUrl || undefined} />
+                <AvatarFallback className="text-lg bg-primary/10 text-primary">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <label className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                <span className="text-white text-[10px] font-medium">更换</span>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/gif,image/webp"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
             <div className="flex-1 space-y-2">
               <Label htmlFor="avatar">头像 URL</Label>
               <Input
                 id="avatar"
                 value={avatarUrl}
                 onChange={(e) => setAvatarUrl(e.target.value)}
-                placeholder="https://..."
+                placeholder="https://... 或点击头像上传本地图片"
                 className="bg-white/5"
               />
             </div>

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -18,7 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Loader2, Plus, Trash2, StickyNote, FileText, X } from "lucide-react";
+import { Loader2, Plus, Trash2, StickyNote, FileText, X, Search } from "lucide-react";
 import { toast } from "sonner";
 
 interface Note {
@@ -39,6 +40,7 @@ export default function NotesPage() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [newJobId, setNewJobId] = useState("");
 
@@ -51,10 +53,12 @@ export default function NotesPage() {
   const saveTimer = useRef<NodeJS.Timeout | null>(null);
 
   const fetchNotes = useCallback(async () => {
-    const res = await fetch("/api/notes");
+    const params = new URLSearchParams();
+    if (searchQuery) params.set("search", searchQuery);
+    const res = await fetch(`/api/notes?${params}`);
     if (res.ok) setNotes(await res.json());
     setLoading(false);
-  }, []);
+  }, [searchQuery]);
 
   useEffect(() => {
     fetchNotes();
@@ -154,6 +158,17 @@ export default function NotesPage() {
         </Button>
       </div>
 
+      {/* Search */}
+      <div className="relative w-full max-w-sm">
+        <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="搜索笔记内容..."
+          className="pl-9 h-9 text-sm bg-white/5"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="size-6 animate-spin text-muted-foreground" />
@@ -163,12 +178,14 @@ export default function NotesPage() {
           <CardContent className="py-12 text-center">
             <StickyNote className="size-8 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground mb-4">
-              还没有笔记，开始记录求职心得
+              {searchQuery ? "没有匹配的笔记" : "还没有笔记，开始记录求职心得"}
             </p>
-            <Button onClick={() => setCreateOpen(true)} size="sm" className="gap-2">
-              <Plus className="size-4" />
-              新建笔记
-            </Button>
+            {!searchQuery && (
+              <Button onClick={() => setCreateOpen(true)} size="sm" className="gap-2">
+                <Plus className="size-4" />
+                新建笔记
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (

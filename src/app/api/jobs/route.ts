@@ -18,9 +18,9 @@ export async function GET(req: Request) {
   if (favorite === "true") where.isFavorite = true;
   if (search) {
     where.OR = [
-      { company: { contains: search, mode: "insensitive" } },
-      { title: { contains: search, mode: "insensitive" } },
-      { jd: { contains: search, mode: "insensitive" } },
+      { company: { contains: search } },
+      { title: { contains: search } },
+      { jd: { contains: search } },
     ];
   }
 

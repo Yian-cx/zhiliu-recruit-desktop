@@ -43,6 +43,12 @@ export function Header() {
     checkApiStatus();
   }, [checkApiStatus]);
 
+  useEffect(() => {
+    const handler = () => checkApiStatus();
+    window.addEventListener("api-config-changed", handler);
+    return () => window.removeEventListener("api-config-changed", handler);
+  }, [checkApiStatus]);
+
   const label = pathname
     ? pathLabels[pathname] ||
       (pathname.startsWith("/jobs/") ? "岗位详情" :

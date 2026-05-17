@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
+import { useState, useEffect, useCallback, useMemo, Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import {
@@ -69,6 +69,24 @@ function InterviewsPageInner() {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [streaming, setStreaming] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const userScrolledUpRef = useRef(false);
+
+  // Auto-scroll to bottom when messages or streaming update
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || userScrolledUpRef.current) return;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+  }, [activeSession?.messages, streaming]);
+
+  function handleScroll() {
+    const el = scrollRef.current;
+    if (!el) return;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 50;
+    userScrolledUpRef.current = !atBottom;
+  }
 
   // Filters
   const [filterJobId, setFilterJobId] = useState(urlJobId);
@@ -306,7 +324,12 @@ function InterviewsPageInner() {
                 <Trash2 className="size-4" />
               </Button>
             </div>
-            <ScrollArea className="flex-1 px-4 py-4">
+            <div
+              ref={scrollRef}
+              onScroll={handleScroll}
+              className="flex-1 overflow-y-auto px-4 py-4"
+              style={{ overflowAnchor: "none" }}
+            >
               <div className="space-y-4">
                 {activeSession.messages?.length === 0 && (
                   <div className="text-center py-12">
@@ -361,7 +384,7 @@ function InterviewsPageInner() {
                   </div>
                 )}
               </div>
-            </ScrollArea>
+            </div>
             <div className="p-4 border-t border-border shrink-0">
               <div className="flex gap-2">
                 <Textarea

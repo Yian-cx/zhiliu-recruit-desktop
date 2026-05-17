@@ -28,7 +28,24 @@ export async function GET(
     return NextResponse.json({ error: "岗位不存在" }, { status: 404 });
   }
 
-  return NextResponse.json(job);
+  const [prevJob, nextJob] = await Promise.all([
+    db.job.findFirst({
+      where: { userId: user.id, updatedAt: { gt: job.updatedAt } },
+      orderBy: { updatedAt: "asc" },
+      select: { id: true },
+    }),
+    db.job.findFirst({
+      where: { userId: user.id, updatedAt: { lt: job.updatedAt } },
+      orderBy: { updatedAt: "desc" },
+      select: { id: true },
+    }),
+  ]);
+
+  return NextResponse.json({
+    ...job,
+    prevId: prevJob?.id || null,
+    nextId: nextJob?.id || null,
+  });
 }
 
 export async function PATCH(
@@ -55,12 +72,16 @@ export async function PATCH(
     );
   }
 
+  const data: Record<string, unknown> = { ...(parsed.data as Record<string, unknown>) };
+  // Only update status if the caller explicitly provided it;
+  // otherwise keep the existing value (Zod default would reset it to INTERESTED)
+  if (!("status" in body)) {
+    delete data.status;
+  }
+
   const updated = await db.job.update({
     where: { id },
-    data: {
-      ...parsed.data,
-      status: parsed.data.status as any,
-    },
+    data,
     include: {
       notes: { orderBy: { updatedAt: "desc" } },
       interviewSessions: { orderBy: { createdAt: "desc" } },

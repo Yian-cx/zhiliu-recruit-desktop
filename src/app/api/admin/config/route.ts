@@ -18,12 +18,13 @@ export async function POST(req: Request) {
   const { error: authError } = await requireAdmin();
   if (authError) return authError;
 
-  const { apiKey, baseUrl, modelName, vipModelName } = await req.json();
+  const body = await req.json();
+  const { apiKey, baseUrl, modelName, vipModelName } = body;
 
   const config = await db.aiConfig.upsert({
     where: { id: "default" },
-    update: { apiKey, baseUrl, modelName, vipModelName },
-    create: { id: "default", apiKey, baseUrl, modelName, vipModelName },
+    update: { apiKey, baseUrl, modelName, vipModelName: vipModelName || null },
+    create: { id: "default", apiKey, baseUrl, modelName, vipModelName: vipModelName || null },
   });
 
   return NextResponse.json(config);

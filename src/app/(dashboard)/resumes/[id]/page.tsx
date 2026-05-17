@@ -54,6 +54,7 @@ export default function ResumeEditorPage() {
   const optimizedRef = useRef<HTMLDivElement>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedJobId, setSelectedJobId] = useState("");
+  const [customPrompt, setCustomPrompt] = useState("");
   const [linkedJobs, setLinkedJobs] = useState<{ id: string; company: string; title: string }[]>([]);
 
   useEffect(() => {
@@ -130,6 +131,7 @@ export default function ResumeEditorPage() {
           jobTitle: selectedJob?.title,
           jobCompany: selectedJob?.company,
           jd: selectedJob?.jd,
+          customInstructions: customPrompt.trim() || undefined,
         }),
       });
 
@@ -150,11 +152,23 @@ export default function ResumeEditorPage() {
       }
 
       let accumulated = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        accumulated += decoder.decode(value, { stream: true });
-        setOptimizedContent(accumulated);
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          accumulated += decoder.decode(value, { stream: true });
+          setOptimizedContent(accumulated);
+        }
+      } catch {
+        setOptimizing(false);
+        toast.error("AI 优化失败，请检查 API 配置是否正确");
+        return;
+      }
+
+      if (!accumulated.trim()) {
+        setOptimizing(false);
+        toast.error("AI 优化失败，请检查 API 配置是否正确");
+        return;
       }
 
       toast.success("优化完成！");
@@ -315,40 +329,56 @@ export default function ResumeEditorPage() {
 
       {/* Optimize Controls */}
       <Card className="glass border-0">
-        <CardContent className="p-4 flex items-center gap-3 flex-wrap">
-          <span className="text-sm text-muted-foreground">AI 优化：</span>
-          <Select
-            value={selectedJobId}
-            onValueChange={(v) => v && setSelectedJobId(v)}
-            items={[
-              { value: "0", label: "通用优化" },
-              ...jobs.map((j) => ({ value: j.id, label: `${j.company} - ${j.title}` })),
-            ]}
-          >
-            <SelectTrigger className="w-48 bg-white/5">
-              <SelectValue placeholder="选择岗位（可选）" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="0">通用优化</SelectItem>
-              {jobs.map((j) => (
-                <SelectItem key={j.id} value={j.id}>
-                  {j.company} - {j.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            onClick={optimize}
-            disabled={optimizing || !content.trim()}
-            variant="secondary"
-          >
-            {optimizing ? (
-              <Loader2 className="size-4 mr-2 animate-spin" />
-            ) : (
-              <Sparkles className="size-4 mr-2" />
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-sm text-muted-foreground">AI 优化：</span>
+            <Select
+              value={selectedJobId}
+              onValueChange={(v) => v && setSelectedJobId(v)}
+              items={[
+                { value: "0", label: "通用优化" },
+                ...jobs.map((j) => ({ value: j.id, label: `${j.company} - ${j.title}` })),
+              ]}
+            >
+              <SelectTrigger className="w-48 bg-white/5">
+                <SelectValue placeholder="选择岗位（可选）" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">通用优化</SelectItem>
+                {jobs.map((j) => (
+                  <SelectItem key={j.id} value={j.id}>
+                    {j.company} - {j.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              onClick={optimize}
+              disabled={optimizing || !content.trim()}
+              variant="secondary"
+            >
+              {optimizing ? (
+                <Loader2 className="size-4 mr-2 animate-spin" />
+              ) : (
+                <Sparkles className="size-4 mr-2" />
+              )}
+              优化简历
+            </Button>
+          </div>
+          <div className="relative">
+            <Textarea
+              value={customPrompt}
+              onChange={(e) => setCustomPrompt(e.target.value)}
+              placeholder="自定义修改要求（可选）：例如「把项目经验改成 STAR 写法」「帮我补一段自我评价」「突出 Python 相关经验」"
+              className="min-h-[52px] max-h-32 resize-y bg-white/5 text-sm"
+              rows={2}
+            />
+            {customPrompt.trim() && (
+              <p className="text-[10px] text-muted-foreground mt-1">
+                已填写自定义要求，AI 将针对你的要求进行修改而非全面优化
+              </p>
             )}
-            优化简历
-          </Button>
+          </div>
         </CardContent>
       </Card>
 

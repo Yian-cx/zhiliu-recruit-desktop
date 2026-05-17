@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
-import { requireAuth, checkAILimit, incrementDailyUsage } from "@/lib/guard";
+import { requireAuth, checkAILimit, incrementDailyUsage, isVIP } from "@/lib/guard";
 import { z } from "zod";
 
 const jdParseSchema = z.object({
@@ -18,14 +18,45 @@ const jdParseSchema = z.object({
   summary: z.string().nullish().default(""),
 });
 
+async function getEffectiveConfig(userId: string) {
+  const globalConfig = await db.aiConfig.findFirst({ where: { id: "default" } });
+
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      role: true,
+      membershipTier: true,
+      membershipExpiresAt: true,
+      personalApiKey: true,
+      personalBaseUrl: true,
+      personalModelName: true,
+    },
+  });
+
+  if (user && isVIP(user) && user.personalApiKey) {
+    return {
+      apiKey: user.personalApiKey,
+      baseUrl: user.personalBaseUrl || globalConfig?.baseUrl || "https://api.deepseek.com",
+      modelName: user.personalModelName || globalConfig?.vipModelName || globalConfig?.modelName || "deepseek-chat",
+      usingPersonalKey: true,
+    };
+  }
+
+  if (!globalConfig?.apiKey) {
+    throw new Error("请先配置 AI 服务");
+  }
+
+  return {
+    apiKey: globalConfig.apiKey,
+    baseUrl: globalConfig.baseUrl,
+    modelName: globalConfig.modelName,
+    usingPersonalKey: false,
+  };
+}
+
 export async function POST(req: Request) {
   const { error: authError, user } = await requireAuth();
   if (authError) return authError;
-
-  const limit = await checkAILimit(user.id, user, false);
-  if (!limit.allowed) {
-    return NextResponse.json({ error: limit.message }, { status: 429 });
-  }
 
   const { jd } = await req.json();
 
@@ -33,12 +64,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "请提供有效的 JD 文本" }, { status: 400 });
   }
 
+  let config: { apiKey: string; baseUrl: string; modelName: string; usingPersonalKey: boolean };
   try {
-    const config = await db.aiConfig.findFirst({ where: { id: "default" } });
-    if (!config?.apiKey) {
-      return NextResponse.json({ error: "请先配置 AI 服务" }, { status: 400 });
-    }
+    config = await getEffectiveConfig(user.id);
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 400 });
+  }
 
+  const limit = await checkAILimit(user.id, user, config.usingPersonalKey);
+  if (!limit.allowed) {
+    return NextResponse.json({ error: limit.message }, { status: 429 });
+  }
+
+  try {
     const res = await fetch(`${config.baseUrl}/v1/chat/completions`, {
       method: "POST",
       headers: {

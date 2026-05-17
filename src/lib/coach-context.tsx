@@ -63,9 +63,9 @@ export function CoachProvider({ children }: { children: ReactNode }) {
     fetchConversations();
   }, [fetchConversations]);
 
-  const toggle = useCallback(() => setIsOpen((v) => !v), []);
+  const toggle = useCallback(() => setIsOpen((v) => { if (v) { setIsMaximized(false); } return !v; }), []);
   const open = useCallback(() => setIsOpen(true), []);
-  const close = useCallback(() => setIsOpen(false), []);
+  const close = useCallback(() => { setIsOpen(false); setIsMaximized(false); }, []);
   const toggleMaximize = useCallback(() => setIsMaximized((v) => !v), []);
 
   const clearMessages = useCallback(() => {

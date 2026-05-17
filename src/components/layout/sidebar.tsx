@@ -60,7 +60,7 @@ const mainNav: NavItem[] = [
 ];
 
 const TIER_LABELS: Record<string, string> = {
-  FREE: "免费用户",
+  FREE: "普通用户",
   WEEKLY_VIP: "周 VIP",
   MONTHLY_VIP: "月 VIP",
   YEARLY_VIP: "年 VIP",

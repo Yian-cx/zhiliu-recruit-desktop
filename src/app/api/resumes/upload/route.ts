@@ -24,7 +24,8 @@ export async function POST(req: Request) {
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const filename = `${Date.now()}-${file.name}`;
-  const filePath = path.join(process.cwd(), "public", "uploads", filename);
+  const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), "public", "uploads");
+const filePath = path.join(uploadDir, filename);
 
   await writeFile(filePath, buffer);
 

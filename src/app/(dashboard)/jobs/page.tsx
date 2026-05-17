@@ -196,6 +196,7 @@ export default function JobsPage() {
       } else {
         toast.error("导入失败，请检查岗位描述格式");
       }
+      setTimeout(() => setBatchOpen(false), 800);
     } catch (e: any) {
       toast.error(e.message || "批量导入失败");
     } finally {

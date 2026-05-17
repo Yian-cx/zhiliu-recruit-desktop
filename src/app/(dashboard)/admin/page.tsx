@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { Save, Wifi, Loader2, Shield, Users, Search, ChevronLeft, ChevronRight } from "lucide-react";
 
 const TIER_OPTIONS = [
-  { value: "FREE", label: "免费用户" },
+  { value: "FREE", label: "普通用户" },
   { value: "WEEKLY_VIP", label: "周 VIP" },
   { value: "MONTHLY_VIP", label: "月 VIP" },
   { value: "YEARLY_VIP", label: "年 VIP" },
@@ -118,10 +118,13 @@ export default function AdminPage() {
     });
     if (res.ok) {
       toast.success("配置已保存");
+      setSaving(false);
+      window.dispatchEvent(new Event("api-config-changed"));
+      await testConnection();
     } else {
       toast.error("保存失败");
+      setSaving(false);
     }
-    setSaving(false);
   }
 
   async function testConnection() {
@@ -138,6 +141,7 @@ export default function AdminPage() {
       toast.error("连接测试失败");
     }
     setTesting(false);
+    window.dispatchEvent(new Event("api-config-changed"));
   }
 
   async function updateUserMembership(userId: string, tier: string) {

@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   const { error: authError, user } = await requireAuth();
   if (authError) return authError;
 
-  const { resumeContent, jobTitle, jobCompany, jd } = await req.json();
+  const { resumeContent, jobTitle, jobCompany, jd, customInstructions } = await req.json();
 
   if (!resumeContent) {
     return NextResponse.json({ error: "请提供简历内容" }, { status: 400 });
@@ -55,7 +55,12 @@ export async function POST(req: Request) {
 **列表：** 优化点用 - 列表，每条不超过一行，间距统一不拥挤。
 
 **语气：** 专业精确，让用户一眼能看到改了什么、为什么。`,
-      prompt: `请优化以下简历，使其更匹配目标岗位。
+      prompt: `${
+        customInstructions
+          ? `用户对简历修改提出了以下具体要求，请根据用户的要求进行针对性的修改：
+
+用户要求：
+${customInstructions}
 
 ${jobTitle ? `目标职位：${jobTitle}` : ""}
 ${jobCompany ? `目标公司：${jobCompany}` : ""}
@@ -63,7 +68,19 @@ ${jobCompany ? `目标公司：${jobCompany}` : ""}
 简历原文：
 ${resumeContent}
 
-${jd ? `岗位描述（JD）：\n${jd}` : ""}`,
+${jd ? `岗位描述（JD）：\n${jd}` : ""}
+
+注意：请只针对用户提出的要求进行修改，保持其他部分不变。先在「## 主要优化点」中说明你按用户要求做了哪些针对性修改，然后再输出完整的修改后简历。`
+          : `请优化以下简历，使其更匹配目标岗位。
+
+${jobTitle ? `目标职位：${jobTitle}` : ""}
+${jobCompany ? `目标公司：${jobCompany}` : ""}
+
+简历原文：
+${resumeContent}
+
+${jd ? `岗位描述（JD）：\n${jd}` : ""}`
+      }`,
     });
 
     if (!usingPersonalKey) {

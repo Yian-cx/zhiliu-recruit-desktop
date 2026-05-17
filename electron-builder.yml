@@ -1,0 +1,66 @@
+appId: com.zhiliu.recruit
+productName: "职流"
+copyright: "Copyright © 2025 知流 AI 求职工作台"
+
+directories:
+  output: release
+  buildResources: resources
+
+files:
+  - dist-electron/**/*
+  - package.json
+
+extraResources:
+  - from: "standalone"
+    to: "app/standalone"
+
+asar: true
+
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+    - target: zip
+      arch:
+        - x64
+        - arm64
+  category: public.app-category.productivity
+  icon: resources/icon.icns
+  artifactName: "${productName}-${version}-mac-${arch}.${ext}"
+
+dmg:
+  title: "职流安装"
+  window:
+    width: 500
+    height: 360
+  iconSize: 100
+  contents:
+    - x: 140
+      y: 160
+    - x: 360
+      y: 160
+      type: link
+      path: /Applications
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: resources/icon.ico
+  artifactName: "${productName}-${version}-win-x64.${ext}"
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  language: 2052
+
+publish:
+  provider: github
+  owner: yian-anthropic
+  repo: zhiliu-recruit-desktop
+  releaseType: release
