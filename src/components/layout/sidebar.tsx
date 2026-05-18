@@ -35,11 +35,13 @@ import {
   Crown,
   Sun,
   Moon,
+  Sparkles,
   PanelLeftClose,
   PanelLeftOpen,
   ChevronUp,
   Zap,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface NavItem {
   href: string;
@@ -89,7 +91,16 @@ export function Sidebar() {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
   const tier = session?.user?.membershipTier || "FREE";
+  const isVIP = tier !== "FREE" || isAdmin;
   const { theme, setTheme } = useTheme();
+
+  const handleThemeChange = (newTheme: string) => {
+    if (newTheme === "green-glass" && !isVIP) {
+      toast.info("蓝白液态玻璃主题仅 VIP 用户可用");
+      return;
+    }
+    setTheme(newTheme);
+  };
 
   const [collapsed, setCollapsed] = useState(false);
 
@@ -108,13 +119,13 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "sticky top-0 h-screen flex flex-col border-r border-border bg-sidebar shrink-0",
+        "sticky top-0 h-screen flex flex-col border-r border-border bg-sidebar shrink-0 pt-10",
         "transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
         collapsed ? "w-16" : "w-56"
       )}
     >
       {/* ── Logo ── */}
-      <div className="flex items-center h-14 shrink-0 px-3 border-b border-border">
+      <div className="flex items-center h-14 shrink-0 pl-3 pr-[22px]">
         {collapsed ? (
           <button
             onClick={() => setCollapsed(false)}
@@ -281,14 +292,52 @@ export function Sidebar() {
               </Link>
             )}
 
-            <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="flex items-center gap-3 px-2 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all w-full text-left"
-            >
-              <Sun className="size-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute size-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-              切换主题
-            </button>
+            <div className="space-y-0.5">
+              <p className="px-2 py-1 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                主题
+              </p>
+              <button
+                onClick={() => handleThemeChange("dark")}
+                className={cn(
+                  "flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-all w-full text-left",
+                  theme === "dark"
+                    ? "text-foreground bg-muted/50"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                )}
+              >
+                <Moon className="size-4" />
+                暗色模式
+              </button>
+              <button
+                onClick={() => handleThemeChange("light")}
+                className={cn(
+                  "flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-all w-full text-left",
+                  theme === "light"
+                    ? "text-foreground bg-muted/50"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                )}
+              >
+                <Sun className="size-4" />
+                亮色模式
+              </button>
+              <button
+                onClick={() => handleThemeChange("green-glass")}
+                className={cn(
+                  "flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-all w-full text-left",
+                  theme === "green-glass"
+                    ? "text-foreground bg-muted/50"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                )}
+              >
+                <Sparkles className={cn("size-4", !isVIP && "text-amber-400")} />
+                <span className="flex-1">蓝白液态玻璃</span>
+                {!isVIP && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 font-medium">
+                    VIP
+                  </span>
+                )}
+              </button>
+            </div>
 
             <div className="h-px bg-border/50 my-1.5" />
 

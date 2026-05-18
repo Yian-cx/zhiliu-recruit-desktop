@@ -101,8 +101,7 @@ async function createWindow(): Promise<void> {
     height: 800,
     minWidth: 900,
     minHeight: 600,
-    backgroundColor: "#0a0a0a",
-    title: "职流 - AI 求职工作台",
+    titleBarStyle: "hidden",
     show: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),

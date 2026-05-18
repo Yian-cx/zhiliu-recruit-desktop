@@ -19,6 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { MarkdownMessage } from "@/components/ui/markdown-message";
 import { toast } from "sonner";
+import { exportMarkdownToWord } from "@/lib/export-utils";
 import { useRef } from "react";
 import {
   ArrowLeft,
@@ -200,50 +201,18 @@ export default function ResumeEditorPage() {
     toast.success("已应用优化版本");
   }
 
-  function exportPdf(source: "preview" | "original" | "optimized") {
-    const refMap: Record<string, HTMLDivElement | null> = {
-      preview: previewRef.current,
-      original: originalRef.current,
-      optimized: optimizedRef.current,
-    };
-    const el = refMap[source];
-    if (!el) {
-      toast.error("没有可导出的内容");
-      return;
-    }
-
-    const html = el.innerHTML;
-    const doc = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8" />
-<style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;color:#1a1a1a;background:#fff;padding:48px 56px;max-width:800px;margin:0 auto;line-height:1.8}
-  h1{font-size:22px;font-weight:700;margin:28px 0 12px;padding-bottom:6px;border-bottom:2px solid #0ea5e9}
-  h2{font-size:18px;font-weight:700;margin:24px 0 10px;color:#0ea5e9}
-  h3{font-size:15px;font-weight:600;margin:18px 0 8px}
-  p{font-size:14px;margin:8px 0}
-  strong{font-weight:700;color:#111}
-  ul,ol{padding-left:20px;margin:8px 0}
-  li{font-size:14px;margin:4px 0}
-  blockquote{border-left:3px solid #0ea5e9;padding:8px 14px;margin:12px 0;background:#f0f9ff;border-radius:0 6px 6px 0}
-  hr{border:none;border-top:1px solid #e5e7eb;margin:20px 0}
-  code{background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:13px}
-  table{width:100%;border-collapse:collapse;margin:12px 0}
-  th,td{border:1px solid #d1d5db;padding:8px 12px;text-align:left;font-size:14px}
-  th{background:#f9fafb;font-weight:600}
-  @media print{body{padding:36px 48px}@page{margin:12mm}}
-</style>
-</head>
-<body>${html}</body>
-<script>window.print()</script>
-</html>`;
-
-    const blob = new Blob([doc], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    window.open(url, "_blank");
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  async function exportWord(source: "preview" | "original" | "optimized") {
+	    const markdownContent = source === "optimized" ? optimizedContent : content;
+	    if (!markdownContent) {
+	      toast.error("没有可导出的内容");
+	      return;
+	    }
+	    try {
+	      const filename = `${name || "简历"}-${source === "optimized" ? "AI优化版" : "原版"}`;
+	      await exportMarkdownToWord(markdownContent, filename);
+	    } catch {
+	      toast.error("Word 导出失败");
+	    }
   }
 
   if (loading) {
@@ -298,9 +267,9 @@ export default function ResumeEditorPage() {
             size="icon"
             onClick={() => {
               const source = optimizedContent ? "optimized" : showPreview ? "preview" : "preview";
-              exportPdf(source);
+              exportWord(source);
             }}
-            title="导出 PDF"
+            title="导出 Word"
           >
             <FileDown className="size-4" />
           </Button>
@@ -392,11 +361,11 @@ export default function ResumeEditorPage() {
               对比模式 — 左：原简历 / 右：AI 优化版本
             </h2>
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={() => exportPdf("optimized")} className="gap-1 text-xs">
+              <Button size="sm" variant="outline" onClick={() => exportWord("optimized")} className="gap-1 text-xs">
                 <FileDown className="size-3" />
                 导出 AI 版本
               </Button>
-              <Button size="sm" variant="outline" onClick={() => exportPdf("original")} className="gap-1 text-xs">
+              <Button size="sm" variant="outline" onClick={() => exportWord("original")} className="gap-1 text-xs">
                 <FileDown className="size-3" />
                 导出原简历
               </Button>

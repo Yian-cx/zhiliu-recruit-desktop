@@ -13,9 +13,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Plus, Trash2, Compass, Sparkles, Target, Zap, TrendingUp, Search, Maximize2, AlertTriangle } from "lucide-react";
+import { Loader2, Plus, Trash2, Compass, Sparkles, Target, Zap, TrendingUp, Search, Maximize2, AlertTriangle, FileDown } from "lucide-react";
 import { MarkdownMessage } from "@/components/ui/markdown-message";
 import { toast } from "sonner";
+import { exportMarkdownToWord } from "@/lib/export-utils";
 
 interface CareerPlan {
   id: string;
@@ -45,6 +46,7 @@ export default function CareerPage() {
   const [viewPlanOpen, setViewPlanOpen] = useState(false);
   const [hasUnsavedResult, setHasUnsavedResult] = useState(false);
   const [confirmClose, setConfirmClose] = useState<"discard" | "retry" | null>(null);
+  const [exportingWord, setExportingWord] = useState(false);
 
   const fetchPlans = useCallback(async () => {
     const res = await fetch("/api/career");
@@ -135,6 +137,20 @@ export default function CareerPage() {
     if (res.ok) {
       setPlans((prev) => prev.filter((p) => p.id !== id));
       toast.success("已删除");
+    }
+  };
+
+  const handleExportWord = async (plan: CareerPlan) => {
+    setExportingWord(true);
+    try {
+      await exportMarkdownToWord(
+        (plan.roadmap as any)?.content || "",
+        `${plan.title} - 职业规划`
+      );
+    } catch {
+      toast.error("Word 导出失败");
+    } finally {
+      setExportingWord(false);
     }
   };
 
@@ -230,14 +246,25 @@ export default function CareerPage() {
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     {plan.roadmap && (plan.roadmap as any).content && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 text-muted-foreground hover:text-primary"
-                        onClick={(e) => { e.stopPropagation(); setViewPlan(plan); setViewPlanOpen(true); }}
-                      >
-                        <Maximize2 className="size-4" />
-                      </Button>
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-muted-foreground hover:text-primary"
+                          onClick={(e) => { e.stopPropagation(); handleExportWord(plan); }}
+                          title="导出 Word"
+                        >
+                          <FileDown className="size-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-muted-foreground hover:text-primary"
+                          onClick={(e) => { e.stopPropagation(); setViewPlan(plan); setViewPlanOpen(true); }}
+                        >
+                          <Maximize2 className="size-4" />
+                        </Button>
+                      </>
                     )}
                     <Button
                       variant="ghost"
@@ -435,7 +462,25 @@ export default function CareerPage() {
       <Dialog open={viewPlanOpen} onOpenChange={setViewPlanOpen}>
         <DialogContent className="glass border-0 max-w-[calc(100%-2rem)] sm:max-w-5xl max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
-            <DialogTitle>{viewPlan?.title || "职业规划"}</DialogTitle>
+            <DialogTitle className="flex items-center justify-between">
+              <span>{viewPlan?.title || "职业规划"}</span>
+              {viewPlan && (viewPlan.roadmap as any)?.content && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => handleExportWord(viewPlan)}
+                  disabled={exportingWord}
+                >
+                  {exportingWord ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <FileDown className="size-3.5" />
+                  )}
+                  <span className="text-xs">导出 Word</span>
+                </Button>
+              )}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             {viewPlan && (
